@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PM
+  DEVELOPER
+}
+
+enum TaskStatus {
+  TO_DO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  OVERDUE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_IN_REVIEW
+}
+
+model User {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  role      Role
+  isOnline  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  refreshTokens RefreshToken[]
+  clients       Client[]
+  projects      Project[]
+  assignedTasks Task[]          @relation("AssignedToTasks")
+  createdTasks  Task[]          @relation("CreatedByTasks")
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token     String   @unique @db.VarChar(512)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Client {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar(255)
+  email       String?   @db.VarChar(255)
+  createdById String?   @db.Uuid
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  projects    Project[]
+}
+
+model Project {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String        @db.VarChar(255)
+  description String?       @db.Text
+  status      ProjectStatus @default(ACTIVE)
+  clientId    String?       @db.Uuid
+  client      Client?       @relation(fields: [clientId], references: [id])
+  createdById String?       @db.Uuid
+  createdBy   User?         @relation(fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+
+  tasks        Task[]
+  activityLogs ActivityLog[]
+
+  @@index([createdById])
+}
+
+model Task {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String       @db.VarChar(255)
+  description  String?      @db.Text
+  status       TaskStatus   @default(TO_DO)
+  priority     TaskPriority @default(MEDIUM)
+  dueDate      DateTime?
+  assignedToId String?      @db.Uuid
+  assignedTo   User?        @relation("AssignedToTasks", fields: [assignedToId], references: [id])
+  projectId    String       @db.Uuid
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById  String?      @db.Uuid
+  createdBy    User?        @relation("CreatedByTasks", fields: [createdById], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now()) @updatedAt
+
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+
+  @@index([assignedToId])
+  @@index([projectId])
+  @@index([status, dueDate])
+  @@index([projectId, status])
+}
+
+model ActivityLog {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId     String     @db.Uuid
+  task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  projectId  String?    @db.Uuid
+  project    Project?   @relation(fields: [projectId], references: [id])
+  userId     String?    @db.Uuid
+  user       User?      @relation(fields: [userId], references: [id])
+  fromStatus TaskStatus
+  toStatus   TaskStatus
+  message    String     @db.Text
+  createdAt  DateTime   @default(now())
+
+  @@index([projectId, createdAt(sort: Desc)])
+}
+
+model Notification {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientId String           @db.Uuid
+  recipient   User             @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  message     String           @db.Text
+  type        NotificationType
+  taskId      String?          @db.Uuid
+  task        Task?            @relation(fields: [taskId], references: [id])
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([recipientId, isRead])
+}

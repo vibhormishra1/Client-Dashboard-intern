@@ -1,0 +1,13 @@
+import { z } from 'zod';
+
+export const createProjectSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  description: z.string().optional(),
+  clientId: z.string().uuid().optional(),
+});
+
+export const updateProjectSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').optional(),
+  description: z.string().optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'ON_HOLD']).optional(),
+});
