@@ -8,9 +8,22 @@ import { env } from '../config/env';
 export let io: Server;
 
 export function initializeSocket(httpServer: HTTPServer): Server {
+  const allowedOrigins = [
+    env.CLIENT_URL?.replace(/\/$/, ''),
+    'https://velozity-dashboard-pi.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5001',
+  ].filter(Boolean);
+
   io = new Server(httpServer, {
     cors: {
-      origin: env.CLIENT_URL,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       credentials: true,
     },
     pingTimeout: 60000,

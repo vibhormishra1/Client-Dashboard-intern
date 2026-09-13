@@ -13,7 +13,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -48,7 +48,7 @@ export async function logout(req: Request, res: Response, next: NextFunction): P
     res.clearCookie(REFRESH_COOKIE_NAME, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
 
     successResponse(res, { message: 'Logged out successfully' });

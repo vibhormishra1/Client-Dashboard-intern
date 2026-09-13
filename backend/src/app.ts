@@ -15,8 +15,24 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 
 const app = express();
 
+const allowedOrigins = [
+  env.CLIENT_URL?.replace(/\/$/, ''),
+  'https://velozity-dashboard-pi.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:5001',
+].filter(Boolean);
+
 app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  credentials: true,
+}));
 app.use(cookieParser(env.COOKIE_SECRET));
 app.use(express.json({ limit: '10mb' }));
 
